@@ -1,0 +1,101 @@
+version: "3.9"
+
+services:
+  # ═══════════════════════════
+  # TRAEFIK - Reverse Proxy + SSL
+  # ═══════════════════════════
+  traefik:
+    image: traefik:v3.1
+    container_name: quinchos-traefik
+    restart: always
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Redirect HTTP → HTTPS
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      # Let's Encrypt SSL
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@art3d-studio.com.ar"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+    networks:
+      - quinchos-net
+    labels:
+      # Dashboard (opcional, protegido)
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.art3d-studio.com.ar`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+
+  # ═══════════════════════════
+  # POSTGRESQL
+  # ═══════════════════════════
+  postgres:
+    image: postgres:16-alpine
+    container_name: quinchos-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: quinchos
+      POSTGRES_USER: quinchos_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-QuinchosDB2026!Seguro}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432" # Solo accesible desde localhost
+    networks:
+      - quinchos-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quinchos_user -d quinchos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ═══════════════════════════
+  # QUINCHOS API
+  # ═══════════════════════════
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quinchos-api
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://quinchos_user:${POSTGRES_PASSWORD:-QuinchosDB2026!Seguro}@postgres:5432/quinchos?schema=public
+      JWT_SECRET: ${JWT_SECRET:-quinchos-jwt-secret-2026-cambiar-en-produccion}
+      FRONTEND_URL: "*"
+    networks:
+      - quinchos-net
+    labels:
+      - "traefik.enable=true"
+      # HTTPS
+      - "traefik.http.routers.api.rule=Host(`quinchos.art3d-studio.com.ar`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+      # Rate limiting
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.burst=50"
+      - "traefik.http.routers.api.middlewares=api-ratelimit"
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  quinchos-net:
+    driver: bridge
