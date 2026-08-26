@@ -47,12 +47,24 @@ export const crearQuinchoSchema = z.object({
 export const buscarQuinchosSchema = z.object({
   q: z.string().optional(),
   tipo: z.enum(['QUINCHO', 'SALON', 'QUINTA', 'TERRAZA', 'JARDIN', 'todos']).optional(),
+  // Filtros de costo por día
   precioMin: z.coerce.number().optional(),
   precioMax: z.coerce.number().optional(),
+  // Filtros de costo por hora
+  precioHoraMin: z.coerce.number().optional(),
+  precioHoraMax: z.coerce.number().optional(),
+  // Capacidad
   capacidadMin: z.coerce.number().optional(),
-  amenidades: z.string().optional(), // comma separated
-  ordenarPor: z.enum(['precio', 'calificacion', 'reciente']).optional(),
+  // Amenidades (comma separated)
+  amenidades: z.string().optional(),
+  // Proximidad
+  lat: z.coerce.number().optional(),
+  lng: z.coerce.number().optional(),
+  radio: z.coerce.number().optional(), // km
+  // Orden
+  ordenarPor: z.enum(['precio', 'precio_asc', 'precio_desc', 'calificacion', 'reciente', 'distancia']).optional(),
   ciudad: z.string().optional(),
+  // Paginación
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(50).default(20),
 });

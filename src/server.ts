@@ -26,7 +26,14 @@ async function main() {
    GET    /api/quinchos
    GET    /api/quinchos/destacados
    GET    /api/quinchos/:id
-   POST   /api/quinchos                  (propietario)
+   GET    /api/quinchos/mapa             (mapa + proximidad)
+   POST   /api/quinchos                  (alta - propietario)
+   PUT    /api/quinchos/:id              (modificación - propietario)
+   DELETE /api/quinchos/:id              (baja - propietario)
+   POST   /api/quinchos/:id/reactivar   (propietario)
+   POST   /api/quinchos/:id/imagenes    (propietario)
+   DELETE /api/quinchos/:id/imagenes/:x (propietario)
+   GET    /api/quinchos/usuario/mis-quinchos (propietario)
    POST   /api/quinchos/:id/favorito     (auth)
    GET    /api/quinchos/usuario/favoritos (auth)
    POST   /api/reservas                  (auth)
@@ -35,6 +42,8 @@ async function main() {
    PATCH  /api/reservas/:id/estado       (propietario)
    POST   /api/resenas                   (auth)
    GET    /api/resenas/quincho/:id
+   
+   Búsqueda: ?q=&tipo=&precioMin=&precioMax=&lat=&lng=&radio=&ordenarPor=distancia
    PATCH  /api/resenas/:id/responder     (propietario)
     `);
   });
