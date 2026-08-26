@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USUARIOS ───
+
+model Usuario {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  nombre        String
+  telefono      String?
+  avatar        String?
+  rol           Rol       @default(USUARIO)
+  verificado    Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relaciones
+  quinchos      Quincho[]     @relation("PropietarioQuinchos")
+  reservas      Reserva[]
+  resenas       Resena[]
+  favoritos     Favorito[]
+
+  @@map("usuarios")
+}
+
+enum Rol {
+  USUARIO
+  PROPIETARIO
+  ADMIN
+}
+
+// ─── QUINCHOS / ESPACIOS ───
+
+model Quincho {
+  id                  String    @id @default(cuid())
+  nombre              String
+  descripcion         String
+  direccion           String
+  ciudad              String
+  provincia           String
+  latitud             Float
+  longitud            Float
+  precioHora          Int       @map("precio_hora")
+  precioDia           Int       @map("precio_dia")
+  capacidadMin        Int       @map("capacidad_min")
+  capacidadMax        Int       @map("capacidad_max")
+  tipo                TipoEspacio
+  disponible          Boolean   @default(true)
+  horarioApertura     String    @map("horario_apertura")
+  horarioCierre       String    @map("horario_cierre")
+  calificacionProm    Float     @default(0) @map("calificacion_prom")
+  totalResenas        Int       @default(0) @map("total_resenas")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Propietario
+  propietarioId       String    @map("propietario_id")
+  propietario         Usuario   @relation("PropietarioQuinchos", fields: [propietarioId], references: [id])
+
+  // Relaciones
+  imagenes            QuinchoImagen[]
+  amenidades          QuinchoAmenidad[]
+  reservas            Reserva[]
+  resenas             Resena[]
+  favoritos           Favorito[]
+
+  @@index([ciudad])
+  @@index([tipo])
+  @@index([propietarioId])
+  @@index([calificacionProm(sort: Desc)])
+  @@map("quinchos")
+}
+
+enum TipoEspacio {
+  QUINCHO
+  SALON
+  QUINTA
+  TERRAZA
+  JARDIN
+}
+
+model QuinchoImagen {
+  id          String  @id @default(cuid())
+  url         String
+  orden       Int     @default(0)
+  quinchoId   String  @map("quincho_id")
+  quincho     Quincho @relation(fields: [quinchoId], references: [id], onDelete: Cascade)
+
+  @@map("quincho_imagenes")
+}
+
+model QuinchoAmenidad {
+  id          String    @id @default(cuid())
+  amenidad    Amenidad
+  quinchoId   String    @map("quincho_id")
+  quincho     Quincho   @relation(fields: [quinchoId], references: [id], onDelete: Cascade)
+
+  @@unique([quinchoId, amenidad])
+  @@map("quincho_amenidades")
+}
+
+enum Amenidad {
+  PARRILLA
+  PILETA
+  ESTACIONAMIENTO
+  WIFI
+  AIRE_ACONDICIONADO
+  COCINA
+  BANO
+  JUEGOS_NINOS
+  MUSICA
+  VAJILLA
+  MESAS_SILLAS
+  SEGURIDAD
+  TECHADO
+}
+
+// ─── RESERVAS ───
+
+model Reserva {
+  id                String        @id @default(cuid())
+  fecha             DateTime      @db.Date
+  horaInicio        String        @map("hora_inicio")
+  horaFin           String        @map("hora_fin")
+  cantidadPersonas  Int           @map("cantidad_personas")
+  precioTotal       Int           @map("precio_total")
+  estado            EstadoReserva @default(PENDIENTE)
+  notas             String?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  // Relaciones
+  usuarioId         String        @map("usuario_id")
+  usuario           Usuario       @relation(fields: [usuarioId], references: [id])
+  quinchoId         String        @map("quincho_id")
+  quincho           Quincho       @relation(fields: [quinchoId], references: [id])
+
+  // Reseña asociada
+  resena            Resena?
+
+  @@index([usuarioId])
+  @@index([quinchoId])
+  @@index([fecha])
+  @@map("reservas")
+}
+
+enum EstadoReserva {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+}
+
+// ─── RESEÑAS ───
+
+model Resena {
+  id              String    @id @default(cuid())
+  calificacion    Int
+  comentario      String
+  fecha           DateTime  @default(now())
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relaciones
+  usuarioId       String    @map("usuario_id")
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  quinchoId       String    @map("quincho_id")
+  quincho         Quincho   @relation(fields: [quinchoId], references: [id])
+  reservaId       String?   @unique @map("reserva_id")
+  reserva         Reserva?  @relation(fields: [reservaId], references: [id])
+
+  // Respuesta del propietario
+  respuestaPropietario  String? @map("respuesta_propietario")
+
+  @@index([quinchoId])
+  @@index([usuarioId])
+  @@map("resenas")
+}
+
+// ─── FAVORITOS ───
+
+model Favorito {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  usuarioId   String    @map("usuario_id")
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+  quinchoId   String    @map("quincho_id")
+  quincho     Quincho   @relation(fields: [quinchoId], references: [id])
+
+  @@unique([usuarioId, quinchoId])
+  @@map("favoritos")
+}

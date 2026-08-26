@@ -1,0 +1,56 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import { errorHandler } from './utils/errors';
+
+// Routes
+import authRoutes from './routes/auth.routes';
+import quinchosRoutes from './routes/quinchos.routes';
+import reservasRoutes from './routes/reservas.routes';
+import resenasRoutes from './routes/resenas.routes';
+
+const app = express();
+
+// ─── Middleware global ───
+app.use(helmet());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true,
+  })
+);
+app.use(morgan('dev'));
+app.use(express.json({ limit: '10mb' }));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: 'Demasiadas peticiones, intentá de nuevo más tarde' },
+});
+app.use('/api/', limiter);
+
+// ─── Health check ───
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, message: 'QuinchosAPI corriendo 🔥', timestamp: new Date().toISOString() });
+});
+
+// ─── Rutas ───
+app.use('/api/auth', authRoutes);
+app.use('/api/quinchos', quinchosRoutes);
+app.use('/api/reservas', reservasRoutes);
+app.use('/api/resenas', resenasRoutes);
+
+// ─── 404 ───
+app.use((_req, res) => {
+  res.status(404).json({ ok: false, error: 'Ruta no encontrada' });
+});
+
+// ─── Error handler global ───
+app.use(errorHandler);
+
+export default app;
