@@ -81,7 +81,7 @@ export const crearReservaSchema = z.object({
 });
 
 export const actualizarEstadoSchema = z.object({
-  estado: z.enum(['CONFIRMADA', 'CANCELADA', 'COMPLETADA']),
+  estado: z.enum(['CONFIRMADA', 'CANCELADA', 'COMPLETADA', 'RECHAZADA']),
 });
 
 // ─── Reseñas ───

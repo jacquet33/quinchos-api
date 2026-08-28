@@ -415,3 +415,22 @@ main()
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
+
+  // ─── Agenda para el primer quincho ───
+  const diasSemana = [
+    { diaSemana: 0, habilitado: false, horaApertura: '08:00', horaCierre: '00:00' },
+    { diaSemana: 1, habilitado: true, horaApertura: '08:00', horaCierre: '00:00' },
+    { diaSemana: 2, habilitado: true, horaApertura: '08:00', horaCierre: '00:00' },
+    { diaSemana: 3, habilitado: true, horaApertura: '08:00', horaCierre: '00:00' },
+    { diaSemana: 4, habilitado: true, horaApertura: '08:00', horaCierre: '00:00' },
+    { diaSemana: 5, habilitado: true, horaApertura: '08:00', horaCierre: '02:00', precioEspecial: 95000 },
+    { diaSemana: 6, habilitado: true, horaApertura: '10:00', horaCierre: '02:00', precioEspecial: 110000 },
+  ];
+
+  for (const dia of diasSemana) {
+    await prisma.agendaDia.create({
+      data: { quinchoId: quinchos[0].id, ...dia },
+    });
+  }
+
+  console.log('✅ Agenda del primer quincho creada');

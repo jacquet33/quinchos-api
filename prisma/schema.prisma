@@ -7,7 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── USUARIOS ───
+// ═══════════════════
+// USUARIOS
+// ═══════════════════
 
 model Usuario {
   id            String    @id @default(cuid())
@@ -21,7 +23,6 @@ model Usuario {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  // Relaciones
   quinchos      Quincho[]     @relation("PropietarioQuinchos")
   reservas      Reserva[]
   resenas       Resena[]
@@ -36,7 +37,9 @@ enum Rol {
   ADMIN
 }
 
-// ─── QUINCHOS / ESPACIOS ───
+// ═══════════════════
+// QUINCHOS / ESPACIOS
+// ═══════════════════
 
 model Quincho {
   id                  String    @id @default(cuid())
@@ -60,16 +63,16 @@ model Quincho {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  // Propietario
   propietarioId       String    @map("propietario_id")
   propietario         Usuario   @relation("PropietarioQuinchos", fields: [propietarioId], references: [id])
 
-  // Relaciones
   imagenes            QuinchoImagen[]
   amenidades          QuinchoAmenidad[]
   reservas            Reserva[]
   resenas             Resena[]
   favoritos           Favorito[]
+  agenda              AgendaDia[]
+  bloqueos            BloqueoFecha[]
 
   @@index([ciudad])
   @@index([tipo])
@@ -122,7 +125,41 @@ enum Amenidad {
   TECHADO
 }
 
-// ─── RESERVAS ───
+// ═══════════════════
+// AGENDA / DISPONIBILIDAD
+// ═══════════════════
+
+model AgendaDia {
+  id              String    @id @default(cuid())
+  diaSemana       Int                               // 0=domingo, 1=lunes...6=sábado
+  habilitado      Boolean   @default(true)
+  horaApertura    String    @map("hora_apertura")   // "08:00"
+  horaCierre      String    @map("hora_cierre")     // "23:00"
+  precioEspecial  Int?      @map("precio_especial") // precio diferente para ese día (ej: finde más caro)
+
+  quinchoId       String    @map("quincho_id")
+  quincho         Quincho   @relation(fields: [quinchoId], references: [id], onDelete: Cascade)
+
+  @@unique([quinchoId, diaSemana])
+  @@map("agenda_dias")
+}
+
+model BloqueoFecha {
+  id          String    @id @default(cuid())
+  fecha       DateTime  @db.Date
+  motivo      String?                               // "Mantenimiento", "Uso personal", etc.
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  quinchoId   String    @map("quincho_id")
+  quincho     Quincho   @relation(fields: [quinchoId], references: [id], onDelete: Cascade)
+
+  @@unique([quinchoId, fecha])
+  @@map("bloqueo_fechas")
+}
+
+// ═══════════════════
+// RESERVAS
+// ═══════════════════
 
 model Reserva {
   id                String        @id @default(cuid())
@@ -133,21 +170,21 @@ model Reserva {
   precioTotal       Int           @map("precio_total")
   estado            EstadoReserva @default(PENDIENTE)
   notas             String?
+  motivoCancelacion String?       @map("motivo_cancelacion")
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
-  // Relaciones
   usuarioId         String        @map("usuario_id")
   usuario           Usuario       @relation(fields: [usuarioId], references: [id])
   quinchoId         String        @map("quincho_id")
   quincho           Quincho       @relation(fields: [quinchoId], references: [id])
 
-  // Reseña asociada
   resena            Resena?
 
   @@index([usuarioId])
   @@index([quinchoId])
   @@index([fecha])
+  @@index([estado])
   @@map("reservas")
 }
 
@@ -156,9 +193,12 @@ enum EstadoReserva {
   CONFIRMADA
   CANCELADA
   COMPLETADA
+  RECHAZADA
 }
 
-// ─── RESEÑAS ───
+// ═══════════════════
+// RESEÑAS
+// ═══════════════════
 
 model Resena {
   id              String    @id @default(cuid())
@@ -167,7 +207,6 @@ model Resena {
   fecha           DateTime  @default(now())
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  // Relaciones
   usuarioId       String    @map("usuario_id")
   usuario         Usuario   @relation(fields: [usuarioId], references: [id])
   quinchoId       String    @map("quincho_id")
@@ -175,7 +214,6 @@ model Resena {
   reservaId       String?   @unique @map("reserva_id")
   reserva         Reserva?  @relation(fields: [reservaId], references: [id])
 
-  // Respuesta del propietario
   respuestaPropietario  String? @map("respuesta_propietario")
 
   @@index([quinchoId])
@@ -183,7 +221,9 @@ model Resena {
   @@map("resenas")
 }
 
-// ─── FAVORITOS ───
+// ═══════════════════
+// FAVORITOS
+// ═══════════════════
 
 model Favorito {
   id          String    @id @default(cuid())
