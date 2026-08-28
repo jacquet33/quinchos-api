@@ -78,6 +78,7 @@ export const crearReservaSchema = z.object({
   horaFin: z.string().min(1, 'Hora fin requerida'),
   cantidadPersonas: z.number().int().positive(),
   notas: z.string().optional(),
+  servicios: z.array(z.string()).optional(),
 });
 
 export const actualizarEstadoSchema = z.object({

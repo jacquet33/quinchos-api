@@ -9,6 +9,7 @@ const pid = (req: Request, key = 'id'): string => req.params[key] as string;
 const reservaIncludes = {
   quincho: { select: { id: true, nombre: true, direccion: true, ciudad: true, tipo: true, precioDia: true, precioHora: true, imagenes: { take: 1, orderBy: { orden: 'asc' as const } } } },
   usuario: { select: { id: true, nombre: true, email: true, telefono: true, avatar: true } },
+  servicios: { include: { servicioExtra: true } },
 };
 
 // ─── Crear reserva (verificando disponibilidad) ───
@@ -45,7 +46,21 @@ export const crearReserva = async (req: Request, res: Response) => {
   if (conflicto) throw new AppError(409, 'Ya existe una reserva para esa fecha');
 
   // Calcular precio (puede tener precio especial por día de semana)
-  const precio = agendaDia?.precioEspecial || quincho.precioDia;
+  const precioBase = agendaDia?.precioEspecial || quincho.precioDia;
+
+  // Servicios extra seleccionados
+  let precioServicios = 0;
+  let serviciosValidos: { id: string; precio: number }[] = [];
+
+  if (data.servicios && data.servicios.length > 0) {
+    const servicios = await prisma.servicioExtra.findMany({
+      where: { id: { in: data.servicios }, quinchoId: data.quinchoId, disponible: true },
+    });
+    serviciosValidos = servicios.map((s: { id: string; precio: number }) => ({ id: s.id, precio: s.precio }));
+    precioServicios = serviciosValidos.reduce((sum, s) => sum + s.precio, 0);
+  }
+
+  const precio = precioBase + precioServicios;
 
   const reserva = await prisma.reserva.create({
     data: {
@@ -57,6 +72,13 @@ export const crearReserva = async (req: Request, res: Response) => {
       notas: data.notas || null,
       usuarioId: req.user!.userId,
       quinchoId: data.quinchoId,
+      servicios: serviciosValidos.length > 0 ? {
+        create: serviciosValidos.map((s) => ({
+          servicioExtraId: s.id,
+          precioUnitario: s.precio,
+          cantidad: 1,
+        })),
+      } : undefined,
     },
     include: reservaIncludes,
   });

@@ -10,6 +10,7 @@ const quinchoIncludes = {
   imagenes: { orderBy: { orden: 'asc' as const } },
   amenidades: { select: { amenidad: true } },
   propietario: { select: { id: true, nombre: true, avatar: true, verificado: true } },
+  serviciosExtra: { where: { disponible: true }, orderBy: { precio: 'asc' as const } },
 };
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {

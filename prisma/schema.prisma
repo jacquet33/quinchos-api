@@ -74,6 +74,7 @@ model Quincho {
   favoritos           Favorito[]
   agenda              AgendaDia[]
   bloqueos            BloqueoFecha[]
+  serviciosExtra      ServicioExtra[]
 
   @@index([ciudad])
   @@index([tipo])
@@ -111,19 +112,88 @@ model QuinchoAmenidad {
 }
 
 enum Amenidad {
+  // Cocina y comida
   PARRILLA
+  HORNO_BARRO
+  COCINA
+  HELADERA
+  FREEZER
+  VAJILLA
+  MICROONDAS
+  // Espacios
   PILETA
-  ESTACIONAMIENTO
+  PILETA_CLIMATIZADA
+  TECHADO
+  JARDIN
+  QUINCHO_CERRADO
+  DECK
+  // Niños
+  JUEGOS_NINOS
+  PELOTERO
+  HAMACAS
+  TOBOGAN
+  ARENERO
+  // Entretenimiento
+  MUSICA
+  PROYECTOR
+  METEGOL
+  PING_PONG
+  POOL
+  CANCHA_FUTBOL
+  CANCHA_TENIS
+  // Servicios
   WIFI
   AIRE_ACONDICIONADO
-  COCINA
-  BANO
-  JUEGOS_NINOS
-  MUSICA
-  VAJILLA
-  MESAS_SILLAS
+  CALEFACCION
+  ESTACIONAMIENTO
   SEGURIDAD
-  TECHADO
+  BANO
+  DUCHA
+  VESTUARIO
+  MESAS_SILLAS
+  ILUMINACION
+  ACCESIBLE
+  // Otros
+  APTO_MASCOTAS
+  FOGON
+  ASADOR_CRIOLLO
+}
+
+
+// ═══════════════════
+// SERVICIOS EXTRA (opcionales con costo)
+// ═══════════════════
+
+model ServicioExtra {
+  id            String    @id @default(cuid())
+  nombre        String                              // "Pelotero inflable"
+  descripcion   String?                             // "Incluye armado y desarmado"
+  precio        Int       @default(0)               // 0 = sin cargo
+  icono         String?                             // nombre de icono SF Symbols
+  disponible    Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  quinchoId     String    @map("quincho_id")
+  quincho       Quincho   @relation(fields: [quinchoId], references: [id], onDelete: Cascade)
+
+  reservas      ReservaServicio[]
+
+  @@index([quinchoId])
+  @@map("servicios_extra")
+}
+
+model ReservaServicio {
+  id                String        @id @default(cuid())
+  precioUnitario    Int           @map("precio_unitario")
+  cantidad          Int           @default(1)
+
+  reservaId         String        @map("reserva_id")
+  reserva           Reserva       @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  servicioExtraId   String        @map("servicio_extra_id")
+  servicioExtra     ServicioExtra @relation(fields: [servicioExtraId], references: [id])
+
+  @@unique([reservaId, servicioExtraId])
+  @@map("reserva_servicios")
 }
 
 // ═══════════════════
@@ -181,6 +251,7 @@ model Reserva {
   quincho           Quincho       @relation(fields: [quinchoId], references: [id])
 
   resena            Resena?
+  servicios         ReservaServicio[]
 
   @@index([usuarioId])
   @@index([quinchoId])

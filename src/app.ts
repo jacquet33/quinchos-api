@@ -13,6 +13,7 @@ import agendaRoutes from './routes/agenda.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import dispositivosRoutes from './routes/dispositivos.routes';
 import uploadsRoutes from './routes/uploads.routes';
+import serviciosRoutes from './routes/servicios.routes';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/agenda', agendaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/dispositivos', dispositivosRoutes);
 app.use('/api/uploads', uploadsRoutes);
+app.use('/api/quinchos', serviciosRoutes);
 
 // Servir imágenes subidas
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || '/app/uploads', {
