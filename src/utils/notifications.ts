@@ -41,45 +41,82 @@ function getApnsToken(): string | null {
 
 async function sendApnsPush(deviceToken: string, title: string, body: string, data?: Record<string, string>) {
   const token = getApnsToken();
-  if (!token) return;
+  if (!token) {
+    console.warn('⚠️ APNs no configurado (faltan APNS_KEY_ID/TEAM_ID/PRIVATE_KEY)');
+    return;
+  }
 
   const payload = JSON.stringify({
     aps: { alert: { title, body }, sound: 'default', badge: 1 },
     ...data,
   });
 
-  return new Promise<void>((resolve) => {
+  // TestFlight usa sandbox, App Store usa production.
+  // Probamos production primero y si falla con BadDeviceToken, reintentamos en sandbox.
+  const hosts = ['api.push.apple.com', 'api.sandbox.push.apple.com'];
+
+  for (const host of hosts) {
+    const resultado = await enviarAHost(host, deviceToken, token, payload);
+    if (resultado === 'ok') return;
+    if (resultado !== 'retry') return; // error definitivo, no reintentar
+  }
+}
+
+function enviarAHost(
+  host: string,
+  deviceToken: string,
+  authToken: string,
+  payload: string
+): Promise<'ok' | 'retry' | 'fail'> {
+  return new Promise((resolve) => {
     try {
-      const client = http2.connect(`https://${APNS_HOST}`);
+      const client = http2.connect(`https://${host}`);
+      let cuerpo = '';
+
       const req = client.request({
         ':method': 'POST',
         ':path': `/3/device/${deviceToken}`,
-        'authorization': `bearer ${token}`,
+        authorization: `bearer ${authToken}`,
         'apns-topic': APNS_BUNDLE_ID,
         'apns-push-type': 'alert',
         'apns-priority': '10',
         'content-type': 'application/json',
       });
 
+      req.setTimeout(10000, () => { req.close(); client.close(); resolve('fail'); });
+      req.on('data', (chunk) => { cuerpo += chunk; });
+
       req.on('response', (headers) => {
         const status = headers[':status'];
-        if (status === 200) {
-          console.log(`📱 Push enviado a ${deviceToken.substring(0, 8)}...`);
-        } else {
-          console.warn(`⚠️ APNs respondió ${status} para ${deviceToken.substring(0, 8)}...`);
-          if (status === 410 || status === 400) {
+        req.on('end', () => {
+          client.close();
+          if (status === 200) {
+            console.log(`📱 Push enviado (${host}) a ${deviceToken.substring(0, 8)}...`);
+            resolve('ok');
+          } else if (status === 400 && cuerpo.includes('BadDeviceToken')) {
+            console.log(`↩️ Token de otro entorno, reintentando...`);
+            resolve('retry');
+          } else if (status === 410) {
+            console.log(`🗑️ Token expirado, eliminando`);
             prisma.dispositivo.deleteMany({ where: { token: deviceToken } }).catch(() => {});
+            resolve('fail');
+          } else {
+            console.warn(`⚠️ APNs ${status} (${host}): ${cuerpo}`);
+            resolve('fail');
           }
-        }
-        client.close();
-        resolve();
+        });
       });
 
-      req.on('error', () => { client.close(); resolve(); });
+      req.on('error', (err) => {
+        console.warn(`⚠️ Error APNs (${host}): ${err.message}`);
+        client.close();
+        resolve('fail');
+      });
+
       req.write(payload);
       req.end();
-    } catch {
-      resolve();
+    } catch (err) {
+      resolve('fail');
     }
   });
 }
