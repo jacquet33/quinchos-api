@@ -50,6 +50,8 @@ export const login = async (req: Request, res: Response) => {
       rol: usuario.rol,
       avatar: usuario.avatar,
       telefono: usuario.telefono,
+      verificado: usuario.verificado,
+      createdAt: usuario.createdAt,
     },
   });
 };
