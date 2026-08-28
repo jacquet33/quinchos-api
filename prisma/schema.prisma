@@ -27,6 +27,7 @@ model Usuario {
   reservas      Reserva[]
   resenas       Resena[]
   favoritos     Favorito[]
+  dispositivos  Dispositivo[]
 
   @@map("usuarios")
 }
@@ -236,4 +237,22 @@ model Favorito {
 
   @@unique([usuarioId, quinchoId])
   @@map("favoritos")
+}
+
+// ═══════════════════
+// DISPOSITIVOS (Push Notifications)
+// ═══════════════════
+
+model Dispositivo {
+  id          String    @id @default(cuid())
+  token       String    @unique                    // FCM token
+  plataforma  String    @default("ios")            // "ios" | "android"
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  usuarioId   String    @map("usuario_id")
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("dispositivos")
 }

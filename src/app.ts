@@ -11,6 +11,7 @@ import reservasRoutes from './routes/reservas.routes';
 import resenasRoutes from './routes/resenas.routes';
 import agendaRoutes from './routes/agenda.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import dispositivosRoutes from './routes/dispositivos.routes';
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use('/api/reservas', reservasRoutes);
 app.use('/api/resenas', resenasRoutes);
 app.use('/api/agenda', agendaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dispositivos', dispositivosRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ ok: false, error: 'Ruta no encontrada' });

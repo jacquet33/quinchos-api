@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { AppError } from '../utils/errors';
 import { crearReservaSchema, actualizarEstadoSchema } from '../validators/schemas';
+import { Notificaciones } from '../utils/notifications';
 
 const pid = (req: Request, key = 'id'): string => req.params[key] as string;
 
@@ -61,6 +62,10 @@ export const crearReserva = async (req: Request, res: Response) => {
   });
 
   res.status(201).json({ ok: true, data: reserva });
+
+  // Notificar al propietario
+  const usuario = await prisma.usuario.findUnique({ where: { id: req.user!.userId }, select: { nombre: true } });
+  Notificaciones.nuevaReserva(quincho.propietarioId, usuario?.nombre || 'Cliente', quincho.nombre, data.fecha).catch(() => {});
 };
 
 // ─── Mis reservas (usuario) ───
@@ -106,6 +111,7 @@ export const confirmarReserva = async (req: Request, res: Response) => {
 
   const actualizada = await prisma.reserva.update({ where: { id: pid(req) }, data: { estado: 'CONFIRMADA' }, include: reservaIncludes });
   res.json({ ok: true, data: actualizada });
+  Notificaciones.reservaConfirmada(reserva.usuarioId, reserva.quincho.propietarioId, reserva.fecha.toISOString().split('T')[0]).catch(() => {});
 };
 
 // ─── Rechazar reserva (propietario) ───
