@@ -40,6 +40,9 @@ services:
       DATABASE_URL: postgresql://quinchos_user:${POSTGRES_PASSWORD}@quinchos-db:5432/quinchos?schema=public
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: "*"
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - quinchos-uploads:/app/uploads
     networks:
       - quinchos-internal
       - traefik-public      # Se conecta al Traefik existente
@@ -53,6 +56,7 @@ services:
 
 volumes:
   quinchos-pgdata:
+  quinchos-uploads:
     driver: local
 
 networks:

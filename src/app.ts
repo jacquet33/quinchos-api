@@ -12,6 +12,7 @@ import resenasRoutes from './routes/resenas.routes';
 import agendaRoutes from './routes/agenda.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import dispositivosRoutes from './routes/dispositivos.routes';
+import uploadsRoutes from './routes/uploads.routes';
 
 const app = express();
 
@@ -41,6 +42,13 @@ app.use('/api/resenas', resenasRoutes);
 app.use('/api/agenda', agendaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/dispositivos', dispositivosRoutes);
+app.use('/api/uploads', uploadsRoutes);
+
+// Servir imágenes subidas
+app.use('/uploads', express.static(process.env.UPLOAD_DIR || '/app/uploads', {
+  maxAge: '30d',
+  immutable: true,
+}));
 
 app.use((_req, res) => {
   res.status(404).json({ ok: false, error: 'Ruta no encontrada' });
