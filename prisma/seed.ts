@@ -7,6 +7,8 @@ async function main() {
   console.log('🌱 Sembrando la base de datos...');
 
   // ─── Limpiar tablas ───
+  await prisma.bloqueoFecha.deleteMany();
+  await prisma.agendaDia.deleteMany();
   await prisma.favorito.deleteMany();
   await prisma.resena.deleteMany();
   await prisma.reserva.deleteMany();
@@ -406,16 +408,6 @@ async function main() {
   });
 
   console.log('✅ Favoritos creados');
-  console.log('🎉 Seed completado exitosamente!');
-}
-
-main()
-  .catch((e) => {
-    console.error('❌ Error en seed:', e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
-
   // ─── Agenda para el primer quincho ───
   const diasSemana = [
     { diaSemana: 0, habilitado: false, horaApertura: '08:00', horaCierre: '00:00' },
@@ -434,3 +426,12 @@ main()
   }
 
   console.log('✅ Agenda del primer quincho creada');
+  console.log('🎉 Seed completado exitosamente!');
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Error en seed:', e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());
