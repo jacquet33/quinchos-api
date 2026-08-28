@@ -104,19 +104,19 @@ export const obtenerReserva = async (req: Request, res: Response) => {
 
 // ─── Confirmar reserva (propietario) ───
 export const confirmarReserva = async (req: Request, res: Response) => {
-  const reserva = await prisma.reserva.findUnique({ where: { id: pid(req) }, include: { quincho: { select: { propietarioId: true } } } });
+  const reserva = await prisma.reserva.findUnique({ where: { id: pid(req) }, include: { quincho: { select: { propietarioId: true, nombre: true } } } });
   if (!reserva) throw new AppError(404, 'Reserva no encontrada');
   if (reserva.quincho.propietarioId !== req.user!.userId && req.user!.rol !== 'ADMIN') throw new AppError(403, 'Sin permisos');
   if (reserva.estado !== 'PENDIENTE') throw new AppError(400, 'Solo se pueden confirmar reservas pendientes');
 
   const actualizada = await prisma.reserva.update({ where: { id: pid(req) }, data: { estado: 'CONFIRMADA' }, include: reservaIncludes });
   res.json({ ok: true, data: actualizada });
-  Notificaciones.reservaConfirmada(reserva.usuarioId, reserva.quincho.propietarioId, reserva.fecha.toISOString().split('T')[0]).catch(() => {});
+  Notificaciones.reservaConfirmada(reserva.usuarioId, reserva.quincho.nombre, reserva.fecha.toISOString().split('T')[0]).catch(() => {});
 };
 
 // ─── Rechazar reserva (propietario) ───
 export const rechazarReserva = async (req: Request, res: Response) => {
-  const reserva = await prisma.reserva.findUnique({ where: { id: pid(req) }, include: { quincho: { select: { propietarioId: true } } } });
+  const reserva = await prisma.reserva.findUnique({ where: { id: pid(req) }, include: { quincho: { select: { propietarioId: true, nombre: true } } } });
   if (!reserva) throw new AppError(404, 'Reserva no encontrada');
   if (reserva.quincho.propietarioId !== req.user!.userId && req.user!.rol !== 'ADMIN') throw new AppError(403, 'Sin permisos');
   if (reserva.estado !== 'PENDIENTE') throw new AppError(400, 'Solo se pueden rechazar reservas pendientes');
@@ -128,11 +128,12 @@ export const rechazarReserva = async (req: Request, res: Response) => {
     include: reservaIncludes,
   });
   res.json({ ok: true, data: actualizada });
+  Notificaciones.reservaRechazada(reserva.usuarioId, reserva.quincho.nombre).catch(() => {});
 };
 
 // ─── Completar reserva (propietario) ───
 export const completarReserva = async (req: Request, res: Response) => {
-  const reserva = await prisma.reserva.findUnique({ where: { id: pid(req) }, include: { quincho: { select: { propietarioId: true } } } });
+  const reserva = await prisma.reserva.findUnique({ where: { id: pid(req) }, include: { quincho: { select: { propietarioId: true, nombre: true } } } });
   if (!reserva) throw new AppError(404, 'Reserva no encontrada');
   if (reserva.quincho.propietarioId !== req.user!.userId && req.user!.rol !== 'ADMIN') throw new AppError(403, 'Sin permisos');
   if (reserva.estado !== 'CONFIRMADA') throw new AppError(400, 'Solo se pueden completar reservas confirmadas');
