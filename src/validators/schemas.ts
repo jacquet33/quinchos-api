@@ -73,9 +73,9 @@ export const buscarQuinchosSchema = z.object({
 
 export const crearReservaSchema = z.object({
   quinchoId: z.string(),
-  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  horaInicio: z.string().regex(/^\d{2}:\d{2}$/),
-  horaFin: z.string().regex(/^\d{2}:\d{2}$/),
+  fecha: z.string().min(1, 'Fecha requerida'),
+  horaInicio: z.string().min(1, 'Hora inicio requerida'),
+  horaFin: z.string().min(1, 'Hora fin requerida'),
   cantidadPersonas: z.number().int().positive(),
   notas: z.string().optional(),
 });
