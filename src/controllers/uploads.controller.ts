@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import sharp from 'sharp';
 import { prisma } from '../utils/prisma';
 import { AppError } from '../utils/errors';
 
@@ -23,16 +24,31 @@ if (!fs.existsSync(path.join(UPLOAD_DIR, 'quinchos'))) {
   fs.mkdirSync(path.join(UPLOAD_DIR, 'quinchos'), { recursive: true });
 }
 
-// ─── Multer storage ───
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, path.join(UPLOAD_DIR, 'quinchos'));
-  },
-  filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+// Guardamos en memoria para poder redimensionar antes de escribir a disco
+const storage = multer.memoryStorage();
+
+/// Procesa una imagen: la achica, la optimiza y genera una miniatura.
+/// Devuelve el nombre base del archivo.
+async function procesarImagen(buffer: Buffer): Promise<string> {
+  const nombre = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
+  const dir = path.join(UPLOAD_DIR, 'quinchos');
+
+  // Versión grande: máximo 1600px de ancho, calidad 82
+  await sharp(buffer)
+    .rotate() // respeta la orientación EXIF de la cámara
+    .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 82, progressive: true, mozjpeg: true })
+    .toFile(path.join(dir, `${nombre}.jpg`));
+
+  // Miniatura: 400px, para listados y cards
+  await sharp(buffer)
+    .rotate()
+    .resize(400, 400, { fit: 'cover' })
+    .jpeg({ quality: 72, progressive: true, mozjpeg: true })
+    .toFile(path.join(dir, `${nombre}_thumb.jpg`));
+
+  return nombre;
+}
 
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   if (ALLOWED_TYPES.includes(file.mimetype)) {
@@ -70,18 +86,19 @@ export const subirImagenes = async (req: Request, res: Response) => {
   });
   const startOrden = (maxOrden?.orden ?? -1) + 1;
 
-  // Guardar en la base de datos
-  const imagenes = await Promise.all(
-    files.map((file, i) =>
-      prisma.quinchoImagen.create({
-        data: {
-          quinchoId,
-          url: `${PUBLIC_URL}/uploads/quinchos/${file.filename}`,
-          orden: startOrden + i,
-        },
-      })
-    )
-  );
+  // Procesar y guardar
+  const imagenes = [];
+  for (let i = 0; i < files.length; i++) {
+    const nombre = await procesarImagen(files[i].buffer);
+    const imagen = await prisma.quinchoImagen.create({
+      data: {
+        quinchoId,
+        url: `${PUBLIC_URL}/uploads/quinchos/${nombre}.jpg`,
+        orden: startOrden + i,
+      },
+    });
+    imagenes.push(imagen);
+  }
 
   res.status(201).json({
     ok: true,
@@ -107,9 +124,10 @@ export const eliminarImagen = async (req: Request, res: Response) => {
   // Extraer nombre del archivo de la URL
   const filename = imagen.url.split('/').pop();
   if (filename) {
-    const filePath = path.join(UPLOAD_DIR, 'quinchos', filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    const base = filename.replace(/\.jpg$/, '');
+    for (const archivo of [`${base}.jpg`, `${base}_thumb.jpg`]) {
+      const filePath = path.join(UPLOAD_DIR, 'quinchos', archivo);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
   }
 
@@ -123,7 +141,8 @@ export const subirAvatar = async (req: Request, res: Response) => {
   const file = req.file;
   if (!file) throw new AppError(400, 'No se envió imagen');
 
-  const avatarUrl = `${PUBLIC_URL}/uploads/quinchos/${file.filename}`;
+  const nombre = await procesarImagen(file.buffer);
+  const avatarUrl = `${PUBLIC_URL}/uploads/quinchos/${nombre}.jpg`;
 
   await prisma.usuario.update({
     where: { id: req.user!.userId },

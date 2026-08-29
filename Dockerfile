@@ -9,7 +9,8 @@ COPY . .
 RUN npm run build
 
 FROM node:20-slim AS runner
-RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
+# libvips es la librería que usa sharp para procesar imágenes
+RUN apt-get update && apt-get install -y openssl wget libvips && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/dist ./dist
