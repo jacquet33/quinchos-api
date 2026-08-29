@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { AppError } from '../utils/errors';
 import { crearQuinchoSchema, buscarQuinchosSchema } from '../validators/schemas';
+import { calcularDemanda, calcularDisponibilidadMes } from './demanda.controller';
 
 const pid = (req: Request, key = 'id'): string => req.params[key] as string;
 
@@ -111,7 +112,12 @@ export const obtenerQuincho = async (req: Request, res: Response) => {
   if (!quincho) throw new AppError(404, 'Quincho no encontrado');
   const cercanos = await prisma.quincho.findMany({ where: { id: { not: quincho.id }, disponible: true }, include: { imagenes: { take: 1, orderBy: { orden: 'asc' } } } });
   const quinchosNearby = cercanos.map((q) => ({ id: q.id, nombre: q.nombre, tipo: q.tipo, precioDia: q.precioDia, calificacionProm: q.calificacionProm, imagen: q.imagenes[0]?.url ?? null, distanciaKm: Math.round(haversineKm(quincho.latitud, quincho.longitud, q.latitud, q.longitud) * 10) / 10 })).filter((q) => q.distanciaKm <= 30).sort((a, b) => a.distanciaKm - b.distanciaKm).slice(0, 5);
-  res.json({ ok: true, data: { ...quincho, quinchosNearby } });
+  const [demanda, disponibilidad] = await Promise.all([
+    calcularDemanda(quincho.id),
+    calcularDisponibilidadMes(quincho.id),
+  ]);
+
+  res.json({ ok: true, data: { ...quincho, quinchosNearby, demanda, disponibilidad } });
 };
 
 // ─── ALTA ───

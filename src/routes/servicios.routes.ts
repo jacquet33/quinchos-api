@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../utils/errors';
 import { auth, requireRole } from '../middleware/auth';
 import * as ctrl from '../controllers/servicios.controller';
+import { analisisDemanda, demandaPublica } from '../controllers/demanda.controller';
 
 const router = Router();
 const propietario = [auth, requireRole('PROPIETARIO', 'ADMIN')];
@@ -21,5 +22,9 @@ router.get('/:quinchoId/servicios/admin', ...propietario, asyncHandler(ctrl.list
 router.post('/:quinchoId/servicios', ...propietario, asyncHandler(ctrl.crearServicio));
 router.patch('/servicios/:servicioId', ...propietario, asyncHandler(ctrl.actualizarServicio));
 router.delete('/servicios/:servicioId', ...propietario, asyncHandler(ctrl.eliminarServicio));
+
+// ─── Demanda ───
+router.get('/:quinchoId/demanda', asyncHandler(demandaPublica));
+router.get('/:quinchoId/demanda/analisis', ...propietario, asyncHandler(analisisDemanda));
 
 export default router;
