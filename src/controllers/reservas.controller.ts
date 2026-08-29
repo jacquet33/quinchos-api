@@ -49,19 +49,46 @@ export const crearReserva = async (req: Request, res: Response) => {
   // Calcular precio (puede tener precio especial por día de semana)
   const precioBase = agendaDia?.precioEspecial || quincho.precioDia;
 
-  // Servicios extra seleccionados
-  let precioServicios = 0;
-  let serviciosValidos: { id: string; precio: number }[] = [];
+  // ─── Servicios del quincho ───
+  // El cliente manda los IDs de los servicios que QUIERE.
+  //   ADICIONAL elegido        → suma su precio
+  //   INCLUIDO no elegido      → descuenta su precio
+  const todosLosServicios = await prisma.servicioExtra.findMany({
+    where: { quinchoId: data.quinchoId, disponible: true },
+  });
 
-  if (data.servicios && data.servicios.length > 0) {
-    const servicios = await prisma.servicioExtra.findMany({
-      where: { id: { in: data.servicios }, quinchoId: data.quinchoId, disponible: true },
-    });
-    serviciosValidos = servicios.map((s: { id: string; precio: number }) => ({ id: s.id, precio: s.precio }));
-    precioServicios = serviciosValidos.reduce((sum, s) => sum + s.precio, 0);
+  const elegidos = new Set(data.servicios ?? []);
+  let ajustePrecio = 0;
+  const filasServicio: {
+    servicioExtraId: string;
+    precioUnitario: number;
+    montoAplicado: number;
+    incluido: boolean;
+  }[] = [];
+
+  for (const serv of todosLosServicios) {
+    const loQuiere = elegidos.has(serv.id);
+
+    if (serv.tipo === 'ADICIONAL' && loQuiere) {
+      ajustePrecio += serv.precio;
+      filasServicio.push({
+        servicioExtraId: serv.id,
+        precioUnitario: serv.precio,
+        montoAplicado: serv.precio,
+        incluido: true,
+      });
+    } else if (serv.tipo === 'INCLUIDO' && !loQuiere) {
+      ajustePrecio -= serv.precio;
+      filasServicio.push({
+        servicioExtraId: serv.id,
+        precioUnitario: serv.precio,
+        montoAplicado: -serv.precio,
+        incluido: false,
+      });
+    }
   }
 
-  const precio = precioBase + precioServicios;
+  const precio = Math.max(0, precioBase + ajustePrecio);
 
   const reserva = await prisma.reserva.create({
     data: {
@@ -73,13 +100,7 @@ export const crearReserva = async (req: Request, res: Response) => {
       notas: data.notas || null,
       usuarioId: req.user!.userId,
       quinchoId: data.quinchoId,
-      servicios: serviciosValidos.length > 0 ? {
-        create: serviciosValidos.map((s) => ({
-          servicioExtraId: s.id,
-          precioUnitario: s.precio,
-          cantidad: 1,
-        })),
-      } : undefined,
+      servicios: filasServicio.length > 0 ? { create: filasServicio } : undefined,
     },
     include: reservaIncludes,
   });

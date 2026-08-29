@@ -165,13 +165,14 @@ enum Amenidad {
 // ═══════════════════
 
 model ServicioExtra {
-  id            String    @id @default(cuid())
-  nombre        String                              // "Pelotero inflable"
-  descripcion   String?                             // "Incluye armado y desarmado"
-  precio        Int       @default(0)               // 0 = sin cargo
-  icono         String?                             // nombre de icono SF Symbols
-  disponible    Boolean   @default(true)
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id            String       @id @default(cuid())
+  nombre        String                                 // "Pelotero inflable" / "Pileta"
+  descripcion   String?
+  tipo          TipoServicio @default(ADICIONAL)
+  precio        Int          @default(0)               // ADICIONAL: cuánto suma. INCLUIDO: cuánto descuenta si lo quitan
+  icono         String?
+  disponible    Boolean      @default(true)
+  createdAt     DateTime     @default(now()) @map("created_at")
 
   quinchoId     String    @map("quincho_id")
   quincho       Quincho   @relation(fields: [quinchoId], references: [id], onDelete: Cascade)
@@ -182,9 +183,16 @@ model ServicioExtra {
   @@map("servicios_extra")
 }
 
+enum TipoServicio {
+  ADICIONAL   // No viene incluido, el cliente lo suma y paga de más
+  INCLUIDO    // Viene incluido, si el cliente no lo quiere paga menos
+}
+
 model ReservaServicio {
   id                String        @id @default(cuid())
   precioUnitario    Int           @map("precio_unitario")
+  montoAplicado     Int           @default(0) @map("monto_aplicado")  // + si suma, - si descuenta
+  incluido          Boolean       @default(true)                       // false = el cliente lo quitó
   cantidad          Int           @default(1)
 
   reservaId         String        @map("reserva_id")

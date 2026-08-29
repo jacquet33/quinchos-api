@@ -154,7 +154,7 @@ export const listarServicios = async (req: Request, res: Response) => {
   const quinchoId = pid(req, 'quinchoId');
   const servicios = await prisma.servicioExtra.findMany({
     where: { quinchoId, disponible: true },
-    orderBy: { precio: 'asc' },
+    orderBy: [{ tipo: 'asc' }, { precio: 'asc' }],
   });
   res.json({ ok: true, data: servicios });
 };
@@ -176,7 +176,7 @@ export const crearServicio = async (req: Request, res: Response) => {
   const quinchoId = pid(req, 'quinchoId');
   await verificarPropietario(quinchoId, req.user!.userId, req.user!.rol);
 
-  const { nombre, descripcion, precio, icono } = req.body;
+  const { nombre, descripcion, precio, icono, tipo } = req.body;
   if (!nombre || nombre.trim().length < 2) throw new AppError(400, 'El nombre es requerido');
 
   const servicio = await prisma.servicioExtra.create({
@@ -184,6 +184,7 @@ export const crearServicio = async (req: Request, res: Response) => {
       quinchoId,
       nombre: nombre.trim(),
       descripcion: descripcion?.trim() || null,
+      tipo: (tipo === 'INCLUIDO' ? 'INCLUIDO' : 'ADICIONAL') as any,
       precio: parseInt(precio) || 0,
       icono: icono || null,
     },
@@ -205,7 +206,7 @@ export const actualizarServicio = async (req: Request, res: Response) => {
     throw new AppError(403, 'No sos el propietario');
   }
 
-  const { nombre, descripcion, precio, icono, disponible } = req.body;
+  const { nombre, descripcion, precio, icono, disponible, tipo } = req.body;
 
   const actualizado = await prisma.servicioExtra.update({
     where: { id: servicioId },
@@ -215,6 +216,7 @@ export const actualizarServicio = async (req: Request, res: Response) => {
       ...(precio !== undefined && { precio: parseInt(precio) || 0 }),
       ...(icono !== undefined && { icono }),
       ...(disponible !== undefined && { disponible }),
+      ...(tipo !== undefined && { tipo: tipo as any }),
     },
   });
 
@@ -240,7 +242,21 @@ export const eliminarServicio = async (req: Request, res: Response) => {
 
 // Sugerencias de servicios comunes
 export const sugerenciasServicios = async (_req: Request, res: Response) => {
-  const sugerencias = [
+  // Servicios que suelen venir incluidos y el cliente puede querer sin ellos
+  const incluidos = [
+    { nombre: 'Pileta', icono: 'drop.fill', precioSugerido: 15000 },
+    { nombre: 'Pileta climatizada', icono: 'drop.circle.fill', precioSugerido: 25000 },
+    { nombre: 'Pelotero', icono: 'circle.grid.3x3.fill', precioSugerido: 12000 },
+    { nombre: 'Juegos para chicos', icono: 'figure.play', precioSugerido: 8000 },
+    { nombre: 'Vajilla', icono: 'wineglass.fill', precioSugerido: 10000 },
+    { nombre: 'Mantelería', icono: 'square.grid.2x2', precioSugerido: 8000 },
+    { nombre: 'Equipo de sonido', icono: 'hifispeaker.2.fill', precioSugerido: 15000 },
+    { nombre: 'Leña y carbón', icono: 'flame', precioSugerido: 10000 },
+    { nombre: 'Limpieza final', icono: 'sparkles', precioSugerido: 18000 },
+    { nombre: 'Calefacción exterior', icono: 'heater.vertical', precioSugerido: 15000 },
+  ];
+
+  const adicionales = [
     { nombre: 'Pelotero inflable', icono: 'circle.grid.3x3.fill', precioSugerido: 25000 },
     { nombre: 'Metegol', icono: 'sportscourt', precioSugerido: 8000 },
     { nombre: 'Mesa de ping pong', icono: 'figure.table.tennis', precioSugerido: 10000 },
@@ -258,5 +274,5 @@ export const sugerenciasServicios = async (_req: Request, res: Response) => {
     { nombre: 'Iluminación decorativa', icono: 'lightbulb.fill', precioSugerido: 15000 },
   ];
 
-  res.json({ ok: true, data: sugerencias });
+  res.json({ ok: true, data: { incluidos, adicionales } });
 };
