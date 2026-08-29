@@ -8,6 +8,10 @@ import { AppError } from '../utils/errors';
 
 // ─── Configuración de almacenamiento ───
 const UPLOAD_DIR = process.env.UPLOAD_DIR || '/app/uploads';
+
+/// URL pública del servidor. Detrás de Traefik, req.protocol devuelve
+/// "http" aunque el usuario entre por HTTPS, y iOS bloquea imágenes por HTTP.
+const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://quinchos.art3d-studio.com.ar').replace(/\/$/, '');
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
@@ -66,16 +70,13 @@ export const subirImagenes = async (req: Request, res: Response) => {
   });
   const startOrden = (maxOrden?.orden ?? -1) + 1;
 
-  // Construir la URL base
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-
   // Guardar en la base de datos
   const imagenes = await Promise.all(
     files.map((file, i) =>
       prisma.quinchoImagen.create({
         data: {
           quinchoId,
-          url: `${baseUrl}/uploads/quinchos/${file.filename}`,
+          url: `${PUBLIC_URL}/uploads/quinchos/${file.filename}`,
           orden: startOrden + i,
         },
       })
@@ -122,8 +123,7 @@ export const subirAvatar = async (req: Request, res: Response) => {
   const file = req.file;
   if (!file) throw new AppError(400, 'No se envió imagen');
 
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const avatarUrl = `${baseUrl}/uploads/quinchos/${file.filename}`;
+  const avatarUrl = `${PUBLIC_URL}/uploads/quinchos/${file.filename}`;
 
   await prisma.usuario.update({
     where: { id: req.user!.userId },

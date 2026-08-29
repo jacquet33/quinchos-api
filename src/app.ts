@@ -17,7 +17,11 @@ import serviciosRoutes from './routes/servicios.routes';
 
 const app = express();
 
-app.use(helmet());
+// Estamos detrás de Traefik: confiar en X-Forwarded-* para que
+// req.protocol devuelva "https" y el rate limit vea la IP real
+app.set('trust proxy', 1);
+
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
