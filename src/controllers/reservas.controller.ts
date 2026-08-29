@@ -19,6 +19,7 @@ export const crearReserva = async (req: Request, res: Response) => {
   const quincho = await prisma.quincho.findUnique({ where: { id: data.quinchoId } });
   if (!quincho) throw new AppError(404, 'Quincho no encontrado');
   if (!quincho.disponible) throw new AppError(400, 'Espacio no disponible');
+  if (quincho.propietarioId === req.user!.userId) throw new AppError(400, 'No podés reservar tu propio espacio');
   if (data.cantidadPersonas > quincho.capacidadMax) throw new AppError(400, `Máximo ${quincho.capacidadMax} personas`);
   if (data.cantidadPersonas < quincho.capacidadMin) throw new AppError(400, `Mínimo ${quincho.capacidadMin} personas`);
 
