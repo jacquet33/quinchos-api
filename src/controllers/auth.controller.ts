@@ -33,10 +33,16 @@ export const login = async (req: Request, res: Response) => {
   const { email, password } = loginSchema.parse(req.body);
 
   const usuario = await prisma.usuario.findUnique({ where: { email } });
-  if (!usuario) throw new AppError(401, 'Credenciales inválidas');
+  if (!usuario) throw new AppError(401, 'Email o contraseña incorrectos');
+
+  // Cuenta creada con Google o Apple: no tiene contraseña
+  if (!usuario.passwordHash) {
+    const proveedor = usuario.proveedor === 'GOOGLE' ? 'Google' : 'Apple';
+    throw new AppError(400, `Esta cuenta se creó con ${proveedor}. Entrá con ese botón.`);
+  }
 
   const match = await bcrypt.compare(password, usuario.passwordHash);
-  if (!match) throw new AppError(401, 'Credenciales inválidas');
+  if (!match) throw new AppError(401, 'Email o contraseña incorrectos');
 
   const token = generateToken({ userId: usuario.id, rol: usuario.rol });
 
@@ -67,6 +73,8 @@ export const perfil = async (req: Request, res: Response) => {
       avatar: true,
       rol: true,
       verificado: true,
+      proveedor: true,
+      passwordHash: true,
       createdAt: true,
       _count: { select: { reservas: true, resenas: true, favoritos: true } },
     },
@@ -74,7 +82,8 @@ export const perfil = async (req: Request, res: Response) => {
 
   if (!usuario) throw new AppError(404, 'Usuario no encontrado');
 
-  res.json({ ok: true, usuario });
+  const { passwordHash, ...resto } = usuario as any;
+  res.json({ ok: true, usuario: { ...resto, tienePassword: passwordHash !== null } });
 };
 
 export const actualizarPerfil = async (req: Request, res: Response) => {
@@ -105,10 +114,13 @@ export const eliminarCuenta = async (req: Request, res: Response) => {
   const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
   if (!usuario) throw new AppError(404, 'Usuario no encontrado');
 
-  // Pedir la contraseña para confirmar
-  if (!password) throw new AppError(400, 'Ingresá tu contraseña para confirmar');
-  const match = await bcrypt.compare(password, usuario.passwordHash);
-  if (!match) throw new AppError(401, 'La contraseña no es correcta');
+  // Las cuentas con contraseña la piden para confirmar.
+  // Las de Google/Apple ya confirmaron escribiendo ELIMINAR en la app.
+  if (usuario.passwordHash) {
+    if (!password) throw new AppError(400, 'Ingresá tu contraseña para confirmar');
+    const match = await bcrypt.compare(password, usuario.passwordHash);
+    if (!match) throw new AppError(401, 'La contraseña no es correcta');
+  }
 
   // No dejar borrar si hay reservas activas
   const reservasActivas = await prisma.reserva.count({
@@ -177,6 +189,10 @@ export const cambiarPassword = async (req: Request, res: Response) => {
 
   const usuario = await prisma.usuario.findUnique({ where: { id: req.user!.userId } });
   if (!usuario) throw new AppError(404, 'Usuario no encontrado');
+
+  if (!usuario.passwordHash) {
+    throw new AppError(400, 'Tu cuenta no tiene contraseña. Podés crear una desde Seguridad.');
+  }
 
   const match = await bcrypt.compare(passwordActual, usuario.passwordHash);
   if (!match) throw new AppError(401, 'La contraseña actual no es correcta');

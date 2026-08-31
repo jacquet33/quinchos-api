@@ -14,12 +14,17 @@ datasource db {
 model Usuario {
   id            String    @id @default(cuid())
   email         String    @unique
-  passwordHash  String    @map("password_hash")
+  passwordHash  String?   @map("password_hash")   // null si entra con Google/Apple
   nombre        String
   telefono      String?
   avatar        String?
   rol           Rol       @default(USUARIO)
   verificado    Boolean   @default(false)
+
+  // Login social
+  proveedor     Proveedor @default(EMAIL)
+  googleId      String?   @unique @map("google_id")
+  appleId       String?   @unique @map("apple_id")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -36,6 +41,12 @@ enum Rol {
   USUARIO
   PROPIETARIO
   ADMIN
+}
+
+enum Proveedor {
+  EMAIL
+  GOOGLE
+  APPLE
 }
 
 // ═══════════════════
