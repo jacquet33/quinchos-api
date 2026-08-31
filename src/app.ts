@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { errorHandler } from './utils/errors';
 
 import authRoutes from './routes/auth.routes';
@@ -26,14 +27,31 @@ app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 
+// Límite general
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, error: 'Demasiadas peticiones' },
+  message: { ok: false, error: 'Demasiadas peticiones. Esperá unos minutos.' },
 });
+
+// Límite estricto para login y registro (evita fuerza bruta)
+const limiterAuth = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // solo cuenta los intentos fallidos
+  message: {
+    ok: false,
+    error: 'Demasiados intentos fallidos. Esperá 15 minutos antes de volver a probar.',
+  },
+});
+
 app.use('/api/', limiter);
+app.use('/api/auth/login', limiterAuth);
+app.use('/api/auth/registro', limiterAuth);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, message: 'QuinchosAPI corriendo 🔥', timestamp: new Date().toISOString() });
@@ -49,6 +67,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/dispositivos', dispositivosRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/quinchos', serviciosRoutes);
+
+// Páginas legales (Apple exige la política de privacidad publicada)
+app.use(express.static(path.join(__dirname, '../public'), { extensions: ['html'] }));
+app.get('/privacidad', (_req, res) => res.sendFile(path.join(__dirname, '../public/privacidad.html')));
+app.get('/terminos', (_req, res) => res.sendFile(path.join(__dirname, '../public/terminos.html')));
 
 // Servir imágenes subidas
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || '/app/uploads', {

@@ -3,6 +3,8 @@ dist
 .env
 .git
 *.md
+# public se copia al build
+
 deploy
 .DS_Store
 coverage
