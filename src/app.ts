@@ -14,6 +14,7 @@ import agendaRoutes from './routes/agenda.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import dispositivosRoutes from './routes/dispositivos.routes';
 import uploadsRoutes from './routes/uploads.routes';
+import invitacionesRoutes from './routes/invitaciones.routes';
 import serviciosRoutes from './routes/servicios.routes';
 
 const app = express();
@@ -67,11 +68,16 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/dispositivos', dispositivosRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/quinchos', serviciosRoutes);
+app.use('/api/invitaciones', invitacionesRoutes);
 
 // Páginas legales (Apple exige la política de privacidad publicada)
 app.use(express.static(path.join(__dirname, '../public'), { extensions: ['html'] }));
 app.get('/privacidad', (_req, res) => res.sendFile(path.join(__dirname, '../public/privacidad.html')));
 app.get('/terminos', (_req, res) => res.sendFile(path.join(__dirname, '../public/terminos.html')));
+
+// Invitaciones públicas
+app.get('/i/:codigo', (_req, res) => res.sendFile(path.join(__dirname, '../public/invitacion.html')));
+app.get('/i/:codigo/:token', (_req, res) => res.sendFile(path.join(__dirname, '../public/invitacion.html')));
 
 // Servir imágenes subidas
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || '/app/uploads', {

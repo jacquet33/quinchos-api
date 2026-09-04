@@ -271,6 +271,7 @@ model Reserva {
 
   resena            Resena?
   servicios         ReservaServicio[]
+  invitacion        Invitacion?
 
   @@index([usuarioId])
   @@index([quinchoId])
@@ -285,6 +286,65 @@ enum EstadoReserva {
   CANCELADA
   COMPLETADA
   RECHAZADA
+}
+
+// ═══════════════════
+// INVITACIONES AL EVENTO
+// ═══════════════════
+
+model Invitacion {
+  id            String    @id @default(cuid())
+  codigo        String    @unique                    // para la URL pública
+  titulo        String                                // "Boda de Ale y Anto"
+  mensaje       String                                // texto de la invitación
+  estilo        EstiloInvitacion @default(ELEGANTE)
+  dressCode     String?   @map("dress_code")
+  notas         String?                               // "No traer regalos" etc
+  mostrarMapa   Boolean   @default(true) @map("mostrar_mapa")
+  activa        Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  reservaId     String    @unique @map("reserva_id")
+  reserva       Reserva   @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+
+  invitados     Invitado[]
+
+  @@map("invitaciones")
+}
+
+enum EstiloInvitacion {
+  ELEGANTE      // boda, aniversario
+  FIESTA        // cumpleaños, celebración
+  INFANTIL      // cumple de chicos
+  CORPORATIVO   // evento de empresa
+  CAMPESTRE     // asado, quincho
+}
+
+model Invitado {
+  id              String          @id @default(cuid())
+  token           String          @unique             // link personal, sin login
+  nombre          String
+  email           String?
+  telefono        String?
+  estado          EstadoInvitado  @default(PENDIENTE)
+  acompanantes    Int             @default(0)
+  mensaje         String?                             // lo que responde el invitado
+  respondioEl     DateTime?       @map("respondio_el")
+  enviadoEl       DateTime?       @map("enviado_el")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  invitacionId    String          @map("invitacion_id")
+  invitacion      Invitacion      @relation(fields: [invitacionId], references: [id], onDelete: Cascade)
+
+  @@index([invitacionId])
+  @@map("invitados")
+}
+
+enum EstadoInvitado {
+  PENDIENTE
+  CONFIRMADO
+  RECHAZADO
 }
 
 // ═══════════════════

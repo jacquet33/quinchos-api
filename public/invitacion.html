@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invitación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fondo:#faf7f2; --texto:#2c2620; --suave:#8a7f72;
+  --acento:#c9a227; --linea:#e6ded2; --tarjeta:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Inter',-apple-system,sans-serif;
+  background:var(--fondo);color:var(--texto);
+  min-height:100vh;padding:20px 16px 60px;
+}
+.tarjeta{
+  max-width:520px;margin:0 auto;background:var(--tarjeta);
+  border-radius:20px;overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.07);
+}
+.foto{width:100%;height:200px;object-fit:cover;display:block;background:#eee}
+.contenido{padding:36px 28px}
+.encabezado{text-align:center;padding-bottom:28px;border-bottom:1px solid var(--linea)}
+.pretitulo{
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--suave);margin-bottom:14px
+}
+h1{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-size:38px;font-weight:500;line-height:1.2;margin-bottom:8px
+}
+.ornamento{
+  width:50px;height:1px;background:var(--acento);
+  margin:20px auto;position:relative
+}
+.ornamento::before{
+  content:'';position:absolute;left:50%;top:-3px;
+  width:7px;height:7px;background:var(--acento);
+  transform:translateX(-50%) rotate(45deg)
+}
+.mensaje{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-size:19px;line-height:1.75;color:var(--suave);
+  white-space:pre-wrap;text-align:center;margin:24px 0
+}
+.datos{margin:28px 0}
+.dato{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--linea)}
+.dato:last-child{border-bottom:none}
+.icono{font-size:19px;width:26px;text-align:center;flex-shrink:0}
+.etiqueta{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--suave);margin-bottom:3px}
+.valor{font-size:15px;font-weight:500}
+.valor a{color:var(--acento);text-decoration:none}
+.rsvp{margin-top:32px;padding-top:28px;border-top:1px solid var(--linea)}
+.rsvp h2{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-size:25px;font-weight:500;text-align:center;margin-bottom:6px
+}
+.rsvp .sub{text-align:center;color:var(--suave);font-size:14px;margin-bottom:24px}
+.botones{display:flex;gap:12px;margin-bottom:18px}
+button{
+  flex:1;padding:15px;border:none;border-radius:11px;
+  font-size:15px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:.15s
+}
+.si{background:var(--acento);color:#fff}
+.si:hover{filter:brightness(1.08)}
+.no{background:transparent;color:var(--suave);border:1px solid var(--linea)}
+.no:hover{background:#f5f1ea}
+.campo{margin-bottom:16px;display:none}
+.campo.visible{display:block}
+label{display:block;font-size:13px;color:var(--suave);margin-bottom:7px}
+input,textarea,select{
+  width:100%;padding:13px;border:1px solid var(--linea);
+  border-radius:10px;font-size:15px;font-family:inherit;
+  background:var(--fondo);color:var(--texto)
+}
+textarea{resize:vertical;min-height:76px}
+.enviar{width:100%;background:var(--acento);color:#fff;margin-top:6px}
+.respuesta{text-align:center;padding:26px;border-radius:14px;margin-top:8px}
+.respuesta.ok{background:#eef6ee;color:#2d6a35}
+.respuesta.no{background:#f7f4f0;color:var(--suave)}
+.respuesta .emoji{font-size:38px;display:block;margin-bottom:10px}
+.respuesta h3{font-size:18px;margin-bottom:6px;font-weight:600}
+.respuesta p{font-size:14px;opacity:.85}
+.cambiar{
+  background:none;border:none;color:var(--acento);
+  font-size:13px;text-decoration:underline;margin-top:14px;padding:0
+}
+.pie{text-align:center;margin-top:26px;font-size:12px;color:var(--suave)}
+.cargando{text-align:center;padding:70px 20px;color:var(--suave)}
+
+/* Variantes de estilo */
+body.FIESTA{--acento:#e85d04;--fondo:#fff8f3}
+body.INFANTIL{--acento:#2ba3d4;--fondo:#f2fafd}
+body.CORPORATIVO{--acento:#33475b;--fondo:#f5f7f9}
+body.CAMPESTRE{--acento:#6b8e4e;--fondo:#f6f8f2}
+body.FIESTA h1,body.INFANTIL h1,body.CORPORATIVO h1{font-family:'Inter',sans-serif;font-weight:600;font-size:31px}
+body.FIESTA .mensaje,body.INFANTIL .mensaje,body.CORPORATIVO .mensaje{font-family:'Inter',sans-serif;font-size:16px}
+</style>
+</head>
+<body>
+
+<div id="app"><div class="cargando">Cargando invitación…</div></div>
+
+<script>
+const partes = location.pathname.split('/').filter(Boolean); // ['i', codigo, token?]
+const codigo = partes[1];
+const token  = partes[2] || null;
+
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','septiembre','octubre','noviembre','diciembre'];
+const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+function formatearFecha(iso) {
+  const d = new Date(iso);
+  return `${DIAS[d.getUTCDay()]} ${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+}
+
+function escapar(t) {
+  const div = document.createElement('div');
+  div.textContent = t ?? '';
+  return div.innerHTML;
+}
+
+async function cargar() {
+  const url = token ? `/api/invitaciones/p/${codigo}/${token}` : `/api/invitaciones/p/${codigo}`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    document.getElementById('app').innerHTML =
+      '<div class="cargando">Esta invitación no está disponible</div>';
+    return;
+  }
+  const { data } = await r.json();
+  document.body.className = data.estilo || 'ELEGANTE';
+  render(data);
+}
+
+function render(d) {
+  const e = d.evento;
+  const mapa = `https://maps.apple.com/?q=${encodeURIComponent(e.lugar)}&ll=${e.latitud},${e.longitud}`;
+
+  const html = `
+    <div class="tarjeta">
+      ${e.foto ? `<img class="foto" src="${e.foto}" alt="">` : ''}
+      <div class="contenido">
+
+        <div class="encabezado">
+          <div class="pretitulo">Te invitamos</div>
+          <h1>${escapar(d.titulo)}</h1>
+          <div class="ornamento"></div>
+        </div>
+
+        ${d.mensaje ? `<div class="mensaje">${escapar(d.mensaje)}</div>` : ''}
+
+        <div class="datos">
+          <div class="dato">
+            <div class="icono">📅</div>
+            <div><div class="etiqueta">Cuándo</div>
+            <div class="valor">${formatearFecha(e.fecha)}</div></div>
+          </div>
+          <div class="dato">
+            <div class="icono">🕐</div>
+            <div><div class="etiqueta">Horario</div>
+            <div class="valor">${e.horaInicio} a ${e.horaFin}</div></div>
+          </div>
+          <div class="dato">
+            <div class="icono">📍</div>
+            <div><div class="etiqueta">Dónde</div>
+            <div class="valor">${escapar(e.lugar)}<br>
+            <span style="font-weight:400;color:var(--suave)">${escapar(e.direccion)}, ${escapar(e.ciudad)}</span>
+            ${d.mostrarMapa ? `<br><a href="${mapa}" target="_blank">Ver cómo llegar →</a>` : ''}
+            </div></div>
+          </div>
+          ${d.dressCode ? `
+          <div class="dato">
+            <div class="icono">👔</div>
+            <div><div class="etiqueta">Vestimenta</div>
+            <div class="valor">${escapar(d.dressCode)}</div></div>
+          </div>` : ''}
+          ${d.notas ? `
+          <div class="dato">
+            <div class="icono">💌</div>
+            <div><div class="etiqueta">Nota</div>
+            <div class="valor" style="font-weight:400">${escapar(d.notas)}</div></div>
+          </div>` : ''}
+        </div>
+
+        ${d.invitado ? renderRSVP(d.invitado) : `
+          <div class="pie">Organiza ${escapar(d.anfitrion)}</div>
+        `}
+      </div>
+    </div>
+  `;
+  document.getElementById('app').innerHTML = html;
+  if (d.invitado) conectarFormulario();
+}
+
+function renderRSVP(inv) {
+  if (inv.estado === 'CONFIRMADO') {
+    const acomp = inv.acompanantes > 0
+      ? `Te esperamos con ${inv.acompanantes} acompañante${inv.acompanantes > 1 ? 's' : ''}.`
+      : 'Te esperamos.';
+    return `
+      <div class="rsvp">
+        <div class="respuesta ok">
+          <span class="emoji">🎉</span>
+          <h3>¡Confirmaste tu asistencia!</h3>
+          <p>${acomp}</p>
+          <button class="cambiar" onclick="mostrarFormulario()">Cambiar mi respuesta</button>
+        </div>
+      </div>`;
+  }
+  if (inv.estado === 'RECHAZADO') {
+    return `
+      <div class="rsvp">
+        <div class="respuesta no">
+          <span class="emoji">💛</span>
+          <h3>Avisaste que no podés venir</h3>
+          <p>Gracias por responder.</p>
+          <button class="cambiar" onclick="mostrarFormulario()">Cambiar mi respuesta</button>
+        </div>
+      </div>`;
+  }
+  return formularioRSVP(inv.nombre);
+}
+
+function formularioRSVP(nombre) {
+  return `
+    <div class="rsvp" id="form">
+      <h2>${nombre ? escapar(nombre) + ', ¿nos acompañás?' : '¿Nos acompañás?'}</h2>
+      <p class="sub">Confirmanos tu asistencia</p>
+
+      <div class="botones">
+        <button class="si" onclick="elegir(true)">Sí, voy</button>
+        <button class="no" onclick="elegir(false)">No puedo</button>
+      </div>
+
+      <div class="campo" id="campoAcomp">
+        <label>¿Venís con acompañantes?</label>
+        <select id="acompanantes">
+          <option value="0">Voy solo/a</option>
+          <option value="1">+1 persona</option>
+          <option value="2">+2 personas</option>
+          <option value="3">+3 personas</option>
+          <option value="4">+4 personas</option>
+          <option value="5">+5 personas</option>
+        </select>
+      </div>
+
+      <div class="campo" id="campoMensaje">
+        <label>Dejale un mensaje (opcional)</label>
+        <textarea id="mensaje" placeholder="Escribí algo lindo..."></textarea>
+      </div>
+
+      <div class="campo" id="campoEnviar">
+        <button class="enviar" onclick="enviar()">Enviar respuesta</button>
+      </div>
+    </div>`;
+}
+
+let asiste = null;
+
+function mostrarFormulario() {
+  document.querySelector('.rsvp').outerHTML = formularioRSVP('');
+  conectarFormulario();
+}
+
+function conectarFormulario() { asiste = null; }
+
+function elegir(valor) {
+  asiste = valor;
+  document.querySelectorAll('.botones button').forEach(b => b.style.opacity = '.45');
+  event.target.style.opacity = '1';
+  document.getElementById('campoAcomp').className = valor ? 'campo visible' : 'campo';
+  document.getElementById('campoMensaje').className = 'campo visible';
+  document.getElementById('campoEnviar').className = 'campo visible';
+}
+
+async function enviar() {
+  if (asiste === null) return;
+  const boton = document.querySelector('.enviar');
+  boton.disabled = true;
+  boton.textContent = 'Enviando…';
+
+  const r = await fetch(`/api/invitaciones/responder/${token}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      asiste,
+      acompanantes: Number(document.getElementById('acompanantes')?.value || 0),
+      mensaje: document.getElementById('mensaje')?.value || '',
+    }),
+  });
+
+  if (r.ok) {
+    location.reload();
+  } else {
+    boton.disabled = false;
+    boton.textContent = 'Enviar respuesta';
+    alert('No se pudo enviar. Probá de nuevo.');
+  }
+}
+
+cargar();
+</script>
+
+</body>
+</html>
